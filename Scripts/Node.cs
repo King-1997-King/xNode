@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace XNode {
@@ -110,6 +111,7 @@ namespace XNode {
         public IEnumerable<NodePort> DynamicInputs { get { foreach (NodePort port in Ports) { if (port.IsDynamic && port.IsInput) yield return port; } } }
         /// <summary> Parent <see cref="NodeGraph"/> </summary>
         [SerializeField] public NodeGraph graph;
+
         /// <summary> Position on the <see cref="NodeGraph"/> </summary>
         [SerializeField] public Vector2 position;
         /// <summary> It is recommended not to modify these at hand. Instead, see <see cref="InputAttribute"/> and <see cref="OutputAttribute"/> </summary>
@@ -118,6 +120,21 @@ namespace XNode {
         /// <summary> Used during node instantiation to fix null/misconfigured graph during OnEnable/Init. Set it before instantiating a node. Will automatically be unset during OnEnable </summary>
         public static NodeGraph graphHotfix;
 
+        /// <summary>
+        /// true:折叠状态; false: 展开状态
+        /// </summary>
+        [FoldButton] [ShowIf("@ShowFold()")] [PropertyOrder(100)]
+        public bool isFold = false;
+
+        /// <summary>
+        /// true:显示折叠按钮; false: 隐藏折叠按钮
+        /// </summary>
+        /// <returns></returns>
+        protected virtual bool ShowFold()
+        {
+            return true;
+        }
+        
         protected void OnEnable() {
             if (graphHotfix != null) graph = graphHotfix;
             graphHotfix = null;

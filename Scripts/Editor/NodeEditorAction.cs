@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
+using XNode;
+using XNode.NodeGroups;
 using XNodeEditor.Internal;
 #if UNITY_2019_1_OR_NEWER && USE_ADVANCED_GENERIC_MENU
 using GenericMenu = XNodeEditor.AdvancedGenericMenu;
@@ -10,17 +12,18 @@ using GenericMenu = XNodeEditor.AdvancedGenericMenu;
 
 namespace XNodeEditor {
     public partial class NodeEditorWindow {
-        public enum NodeActivity { Idle, HoldNode, DragNode, HoldGrid, DragGrid }
+        public enum NodeActivity { Idle, HoldNode, DragNode, HoldGrid, DragGrid, HoldBlackboard, DragBlackboard, ResizeBlackboard }
         public static NodeActivity currentActivity = NodeActivity.Idle;
         public static bool isPanning { get; private set; }
         public static Vector2[] dragOffset;
 
         public static XNode.Node[] copyBuffer = null;
 
-        public bool IsDraggingPort { get { return draggedOutput != null; } }
-        public bool IsHoveringPort { get { return hoveredPort != null; } }
-        public bool IsHoveringNode { get { return hoveredNode != null; } }
-        public bool IsHoveringReroute { get { return hoveredReroute.port != null; } }
+        public bool IsDraggingPort       { get { return draggedOutput != null; } }
+        public bool IsHoveringPort       { get { return hoveredPort != null; } }
+        public bool IsHoveringNode       { get { return hoveredNode != null; } }
+        public bool IsHoveringReroute    { get { return hoveredReroute.port != null; } }
+        public bool IsHoveringBlackboard { get { return hoveredBlackboard != null; } }
 
         /// <summary> Return the dragged port or null if not exist </summary>
         public XNode.NodePort DraggedOutputPort { get { XNode.NodePort result = draggedOutput; return result; } }
@@ -28,6 +31,7 @@ namespace XNodeEditor {
         public XNode.NodePort HoveredPort { get { XNode.NodePort result = hoveredPort; return result; } }
         /// <summary> Return the Hovered node or null if not exist </summary>
         public XNode.Node HoveredNode { get { XNode.Node result = hoveredNode; return result; } }
+        public NodeBlackboard HoveredBlackboard { get { return hoveredBlackboard; } }
 
         private XNode.Node hoveredNode = null;
         [NonSerialized] public XNode.NodePort hoveredPort = null;
@@ -35,6 +39,7 @@ namespace XNodeEditor {
         [NonSerialized] private XNode.NodePort draggedOutputTarget = null;
         [NonSerialized] private XNode.NodePort autoConnectOutput = null;
         [NonSerialized] private List<Vector2> draggedOutputReroutes = new List<Vector2>();
+        [NonSerialized] private NodeBlackboard hoveredBlackboard = null;
 
         private RerouteReference hoveredReroute = new RerouteReference();
         public List<RerouteReference> selectedReroutes = new List<RerouteReference>();
@@ -45,6 +50,11 @@ namespace XNodeEditor {
         private bool isDoubleClick = false;
         private Vector2 lastMousePosition;
         private float dragThreshold = 1f;
+
+        /// <summary>
+        /// 拖拽blackboard的偏移
+        /// </summary>
+        private Vector2 dragBlackboardOffset;
 
         public void Controls() {
             wantsMouseMove = true;
@@ -63,6 +73,10 @@ namespace XNodeEditor {
                     lastMousePosition = e.mousePosition;
                     break;
                 case EventType.ScrollWheel:
+                    if (IsHoveringNode && hoveredNode is NodeDescribe)
+                    {
+                        break;
+                    }
                     float oldZoom = zoom;
                     if (e.delta.y > 0) zoom += 0.1f * zoom;
                     else zoom -= 0.1f * zoom;
@@ -145,6 +159,43 @@ namespace XNodeEditor {
                             if (boxSize.y < 0) { boxStartPos.y += boxSize.y; boxSize.y = Mathf.Abs(boxSize.y); }
                             selectionBox = new Rect(boxStartPos, boxSize);
                             Repaint();
+                        }else if (currentActivity == NodeActivity.HoldBlackboard) {
+                            currentActivity = NodeActivity.DragBlackboard;
+                        }else if (currentActivity == NodeActivity.DragBlackboard) {
+                            for( int i = 0; i < Selection.objects.Length; i++ ) {
+                                if (Selection.objects[i] is NodeBlackboard blackboard) {
+                                    Vector2 newPos = e.mousePosition - dragBlackboardOffset;
+                                    if (newPos.x < 0)
+                                    {
+                                        newPos.x = 0;
+                                    }
+                                    else if (newPos.x + blackboard.rect.width > position.width)
+                                    {
+                                        newPos.x = position.width - blackboard.rect.width;
+                                    }
+
+                                    if (newPos.y < 0)
+                                    {
+                                        newPos.y = 0;
+                                    }
+                                    else if (newPos.y + blackboard.rect.height + 25 > position.height)
+                                    {
+                                        newPos.y = position.height - blackboard.rect.height - 25;
+                                    }
+
+                                    blackboard.rect.position = newPos;
+                                    Repaint();
+                                }
+                            }
+                        }else if (currentActivity == NodeActivity.ResizeBlackboard) {
+                            for( int i = 0; i < Selection.objects.Length; i++ ) {
+                                if (Selection.objects[i] is NodeBlackboard blackboard) {
+                                    Vector2 blackboardPos = NodeBlackboardEditor.GetEditor(blackboard, this).GetInWindowPos();
+                                    blackboard.rect.width = Mathf.Max(200, e.mousePosition.x - blackboardPos.x + 5);
+                                    blackboard.rect.height = Mathf.Max(200, e.mousePosition.y - blackboardPos.y + 5);
+                                    Repaint();
+                                }
+                            }
                         }
                     } else if (e.button == 1 || e.button == 2) {
                         //check drag threshold for larger screens
@@ -158,8 +209,23 @@ namespace XNodeEditor {
                     Repaint();
                     if (e.button == 0) {
                         draggedOutputReroutes.Clear();
-
-                        if (IsHoveringPort) {
+                        if (IsHoveringBlackboard) {
+                            if (!Selection.Contains(hoveredBlackboard)) {
+                                Selection.objects = new[] { hoveredBlackboard };
+                            }
+                            Vector2 blackboardPos = NodeBlackboardEditor.GetEditor(hoveredBlackboard, this).GetInWindowPos();
+                            Rect lowerRight = new Rect(blackboardPos + new Vector2(hoveredBlackboard.rect.width - 10, hoveredBlackboard.rect.height - 10), new Vector2(10, 10));
+                            if (lowerRight.Contains(e.mousePosition)) {
+                                currentActivity = NodeActivity.ResizeBlackboard;
+                            } else {
+                                Rect headRect = new Rect(blackboardPos, new Vector2(hoveredBlackboard.rect.width, 40));
+                                if (headRect.Contains(e.mousePosition)) {
+                                    dragBlackboardOffset = e.mousePosition - hoveredBlackboard.rect.position;
+                            
+                                    currentActivity = NodeActivity.HoldBlackboard;
+                                }
+                            }
+                        }else if (IsHoveringPort) {
                             if (hoveredPort.IsOutput) {
                                 draggedOutput = hoveredPort;
                                 autoConnectOutput = hoveredPort;
@@ -178,6 +244,10 @@ namespace XNodeEditor {
                                 }
                             }
                         } else if (IsHoveringNode && IsHoveringTitle(hoveredNode)) {
+                            if (Selection.objects.Length > 0 && Selection.objects[0] is NodeBlackboard) {
+                                Selection.objects = null;
+                            }
+                            
                             // If mousedown on node header, select or deselect
                             if (!Selection.Contains(hoveredNode)) {
                                 SelectNode(hoveredNode, e.control || e.shift);
@@ -248,6 +318,14 @@ namespace XNodeEditor {
                             IEnumerable<XNode.Node> nodes = Selection.objects.Where(x => x is XNode.Node).Select(x => x as XNode.Node);
                             foreach (XNode.Node node in nodes) EditorUtility.SetDirty(node);
                             if (NodeEditorPreferences.GetSettings().autoSave) AssetDatabase.SaveAssets();
+                        } else if(currentActivity == NodeActivity.DragBlackboard) {
+                            IEnumerable<NodeBlackboard> blackboards = Selection.objects.Where(x => x is NodeBlackboard).Select(x => x as NodeBlackboard);
+                            foreach (var b in blackboards) EditorUtility.SetDirty(b);
+                            if (NodeEditorPreferences.GetSettings().autoSave) AssetDatabase.SaveAssets();
+                        } else if (currentActivity == NodeActivity.ResizeBlackboard) {
+                            IEnumerable<NodeBlackboard> blackboards = Selection.objects.Where(x => x is NodeBlackboard).Select(x => x as NodeBlackboard);
+                            foreach (var b in blackboards) EditorUtility.SetDirty(b);
+                            if (NodeEditorPreferences.GetSettings().autoSave) AssetDatabase.SaveAssets();
                         } else if (!IsHoveringNode) {
                             // If click outside node, release field focus
                             if (!isPanning) {
@@ -295,7 +373,7 @@ namespace XNodeEditor {
                                 NodeEditor.GetEditor(hoveredNode, this).AddContextMenuItems(menu);
                                 menu.DropDown(new Rect(Event.current.mousePosition, Vector2.zero));
                                 e.Use(); // Fixes copy/paste context menu appearing in Unity 5.6.6f2 - doesn't occur in 2018.3.2f1 Probably needs to be used in other places.
-                            } else if (!IsHoveringNode) {
+                            } else if (!IsHoveringBlackboard && (!IsHoveringNode || hoveredNode as NodeGroup)) {
                                 autoConnectOutput = null;
                                 GenericMenu menu = new GenericMenu();
                                 graphEditor.AddContextMenuItems(menu);

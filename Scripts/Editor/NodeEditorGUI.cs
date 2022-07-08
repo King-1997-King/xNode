@@ -14,6 +14,7 @@ namespace XNodeEditor {
         public NodeGraphEditor graphEditor;
         private List<UnityEngine.Object> selectionCache;
         private List<XNode.Node> culledNodes;
+
         /// <summary> 19 if docked, 22 if not </summary>
         private int topPadding { get { return isDocked() ? 19 : 22; } }
         /// <summary> Executed after all other window GUI. Useful if Zoom is ruining your day. Automatically resets after being run.</summary>
@@ -26,13 +27,18 @@ namespace XNodeEditor {
             if (graph == null) return;
             ValidateGraphEditor();
             Controls();
-
+            
             DrawGrid(position, zoom, panOffset);
             DrawConnections();
             DrawDraggedConnection();
             DrawNodes();
             DrawSelectionBox();
             DrawTooltip();
+            
+            DrawHead();
+            hoveredBlackboard = null;
+            DrawGlobalBlackboard();
+            
             graphEditor.OnGUI();
 
             // Run and reset onLateGUI
@@ -585,6 +591,73 @@ namespace XNodeEditor {
             Rect rect = new Rect(Event.current.mousePosition - (size), size);
             EditorGUI.LabelField(rect, content, NodeEditorResources.styles.tooltip);
             Repaint();
+        }
+
+        private void DrawHead()
+        {
+            GUILayout.BeginHorizontal(new GUIStyle());
+            GUI.color = new Color(2, 2, 2, 255);
+            GUI.Box(new Rect(0, 0, position.width, 25), GUIContent.none);
+            GUI.color = Color.white;
+            if (GUI.Button(new Rect(new Vector2(position.width-84, 2),new Vector2(80,21)),"Preferences"))
+            {
+                NodeEditorReflection.OpenPreferences();
+            }
+            if (graph.blackboard != null)
+            {
+                if (graph.blackboard.isShow)
+                {
+                    GUI.color = Color.white;
+                }
+                else
+                {
+                    GUI.color = Color.gray;
+                }
+
+                if (GUILayout.Button("Blackboard", GUILayout.Width(80)))
+                {
+                    graph.blackboard.isShow = !graph.blackboard.isShow;
+                    EditorUtility.SetDirty(graph.blackboard);
+                    if (NodeEditorPreferences.GetSettings().autoSave) AssetDatabase.SaveAssets();
+                }
+            }
+            GUILayout.EndHorizontal();
+        }
+        
+        private void DrawGlobalBlackboard()
+        {
+            if (graph.blackboard != null && graph.blackboard.isShow) {
+                NodeBlackboardEditor blackboardEditor = NodeBlackboardEditor.GetEditor(graph.blackboard, this);
+                Rect blackboardRect = blackboardEditor.GetInWindowRect();
+                GUILayout.BeginArea(blackboardRect);
+                GUIStyle style = new GUIStyle();
+                style.border = new RectOffset(32, 32, 32, 32);
+                style.padding = new RectOffset(16, 16, 4, 16);
+                GUILayout.BeginVertical(style);
+                
+
+                GUI.color = new Color(1.5f, 1.5f, 1.5f, 8);
+                GUI.Box(new Rect(Vector2.zero, blackboardRect.size), GUIContent.none);
+
+                GUI.color = new Color(1f, 1f, 1f, 8);
+                GUI.Box(new Rect(Vector2.zero, new Vector2(blackboardRect.size.x, 40)), GUIContent.none);
+                GUIStyle labelStyle = new GUIStyle();
+                labelStyle.alignment = TextAnchor.MiddleCenter;
+                labelStyle.fontStyle = FontStyle.Bold;
+                labelStyle.normal.textColor = Color.white;
+                GUILayout.Label("GloablBlackboard", labelStyle, GUILayout.Height(40));
+                GUI.color = Color.white;
+                
+                blackboardEditor.OnBodyGUI();
+                
+                GUILayout.EndVertical();
+                GUILayout.EndArea();
+                
+                if (blackboardRect.Contains(Event.current.mousePosition))
+                {
+                    hoveredBlackboard = graph.blackboard;
+                }
+            }
         }
     }
 }

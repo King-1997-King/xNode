@@ -303,6 +303,7 @@ namespace XNode {
             }
             // Trigger OnRemoveConnection
             node.OnRemoveConnection(this);
+            if (port != null && port.IsConnectedTo(this)) port.node.OnRemoveConnection(port);
         }
 
         /// <summary> Disconnect this port from another port </summary>

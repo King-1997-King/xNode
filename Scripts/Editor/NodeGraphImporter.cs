@@ -29,6 +29,13 @@ namespace XNodeEditor {
                     if (attrib.type1 != null) AddRequired(graph, attrib.type1, ref position);
                     if (attrib.type2 != null) AddRequired(graph, attrib.type2, ref position);
                 }
+                
+                NodeBlackboard blackboard =  graph.InitBlackboard();
+                if (blackboard != null) {
+                    blackboard.name = "GlobalBlackboard";
+                    AssetDatabase.AddObjectToAsset(blackboard, graph);
+                    AssetDatabase.SaveAssets();
+                }
             }
         }
 

@@ -1,15 +1,52 @@
 ﻿using System;
 using System.Collections.Generic;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
-namespace XNode {
+namespace XNode
+{
     /// <summary> Base class for all node graphs </summary>
     [Serializable]
-    public abstract class NodeGraph : ScriptableObject {
+    public abstract class NodeGraph : ScriptableObject
+    {
 
         /// <summary> All nodes in the graph. <para/>
         /// See: <see cref="AddNode{T}"/> </summary>
         [SerializeField] public List<Node> nodes = new List<Node>();
+
+        public NodeBlackboard blackboard = null;
+        /// <summary>
+        /// 是否已经初始化
+        /// </summary>
+        [HideIf("@true")]
+        public bool inited = false;
+
+        public NodeBlackboard InitBlackboard() {
+            if (!inited) {
+                inited = true;
+                return SetBlackboard();
+            }
+            return null;
+        }
+
+        public NodeBlackboard SetBlackboard() {
+            Type blackboardType = GetBlackboardType();
+            if (blackboardType != null) {
+                blackboard = ScriptableObject.CreateInstance(blackboardType) as NodeBlackboard;
+                blackboard.graph = this;
+            } else {
+                blackboard = null;
+            }
+            return blackboard;
+        }
+
+        /// <summary>
+        /// 获取Blackboard type
+        /// </summary>
+        /// <returns></returns>
+        public virtual Type GetBlackboardType() {
+            return null;
+        }
 
         /// <summary> Add a node to the graph by type (convenience method - will call the System.Type version) </summary>
         public T AddNode<T>() where T : Node {
@@ -46,7 +83,7 @@ namespace XNode {
         /// <summary> Remove all nodes and connections from the graph </summary>
         public virtual void Clear() {
             if (Application.isPlaying) {
-                for (int i = 0; i < nodes.Count; i++) {
+                for( int i = 0; i < nodes.Count; i++ ) {
                     Destroy(nodes[i]);
                 }
             }
@@ -58,7 +95,7 @@ namespace XNode {
             // Instantiate a new nodegraph instance
             NodeGraph graph = Instantiate(this);
             // Instantiate all nodes inside the graph
-            for (int i = 0; i < nodes.Count; i++) {
+            for( int i = 0; i < nodes.Count; i++ ) {
                 if (nodes[i] == null) continue;
                 Node.graphHotfix = graph;
                 Node node = Instantiate(nodes[i]) as Node;
@@ -67,7 +104,7 @@ namespace XNode {
             }
 
             // Redirect all connections
-            for (int i = 0; i < graph.nodes.Count; i++) {
+            for( int i = 0; i < graph.nodes.Count; i++ ) {
                 if (graph.nodes[i] == null) continue;
                 foreach (NodePort port in graph.nodes[i].Ports) {
                     port.Redirect(nodes, graph.nodes);
@@ -82,10 +119,11 @@ namespace XNode {
             Clear();
         }
 
-#region Attributes
+        #region Attributes
         /// <summary> Automatically ensures the existance of a certain node type, and prevents it from being deleted. </summary>
         [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-        public class RequireNodeAttribute : Attribute {
+        public class RequireNodeAttribute : Attribute
+        {
             public Type type0;
             public Type type1;
             public Type type2;
@@ -119,6 +157,6 @@ namespace XNode {
                 return false;
             }
         }
-#endregion
+        #endregion
     }
 }
