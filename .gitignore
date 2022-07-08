@@ -28,3 +28,4 @@ sysinfo.txt
 
 # OS X only:
 .DS_Store
+/Samples.meta

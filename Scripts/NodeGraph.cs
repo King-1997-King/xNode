@@ -14,47 +14,50 @@ namespace XNode
         /// See: <see cref="AddNode{T}"/> </summary>
         [SerializeField] public List<Node> nodes = new List<Node>();
 
-        public NodeBlackboard blackboard = null;
+        public NodeBlackboard blackboard { get; private set; }
         /// <summary>
         /// 是否已经初始化
         /// </summary>
         [HideIf("@true")]
         public bool inited = false;
 
-        public NodeBlackboard InitBlackboard() {
-            if (!inited) {
+        public void InitBlackboard()
+        {
+            if (!inited)
+            {
                 inited = true;
-                return SetBlackboard();
-            }
-            return null;
-        }
 
-        public NodeBlackboard SetBlackboard() {
-            Type blackboardType = GetBlackboardType();
-            if (blackboardType != null) {
-                blackboard = ScriptableObject.CreateInstance(blackboardType) as NodeBlackboard;
-                blackboard.graph = this;
-            } else {
-                blackboard = null;
+                Type blackboardType = RegisterBlackboardType();
+                if (blackboardType != null)
+                {
+                    blackboard = ScriptableObject.CreateInstance(blackboardType) as NodeBlackboard;
+                    blackboard.graph = this;
+                }
+                else
+                {
+                    blackboard = null;
+                }
             }
-            return blackboard;
         }
 
         /// <summary>
-        /// 获取Blackboard type
+        /// 注册 Blackboard 
         /// </summary>
         /// <returns></returns>
-        public virtual Type GetBlackboardType() {
+        public virtual Type RegisterBlackboardType()
+        {
             return null;
         }
 
         /// <summary> Add a node to the graph by type (convenience method - will call the System.Type version) </summary>
-        public T AddNode<T>() where T : Node {
+        public T AddNode<T>() where T : Node
+        {
             return AddNode(typeof(T)) as T;
         }
 
         /// <summary> Add a node to the graph by type </summary>
-        public virtual Node AddNode(Type type) {
+        public virtual Node AddNode(Type type)
+        {
             Node.graphHotfix = this;
             Node node = ScriptableObject.CreateInstance(type) as Node;
             node.graph = this;
@@ -63,7 +66,8 @@ namespace XNode
         }
 
         /// <summary> Creates a copy of the original node in the graph </summary>
-        public virtual Node CopyNode(Node original) {
+        public virtual Node CopyNode(Node original)
+        {
             Node.graphHotfix = this;
             Node node = ScriptableObject.Instantiate(original);
             node.graph = this;
@@ -74,16 +78,20 @@ namespace XNode
 
         /// <summary> Safely remove a node and all its connections </summary>
         /// <param name="node"> The node to remove </param>
-        public virtual void RemoveNode(Node node) {
+        public virtual void RemoveNode(Node node)
+        {
             node.ClearConnections();
             nodes.Remove(node);
             if (Application.isPlaying) Destroy(node);
         }
 
         /// <summary> Remove all nodes and connections from the graph </summary>
-        public virtual void Clear() {
-            if (Application.isPlaying) {
-                for( int i = 0; i < nodes.Count; i++ ) {
+        public virtual void Clear()
+        {
+            if (Application.isPlaying)
+            {
+                for (int i = 0; i < nodes.Count; i++)
+                {
                     Destroy(nodes[i]);
                 }
             }
@@ -91,11 +99,13 @@ namespace XNode
         }
 
         /// <summary> Create a new deep copy of this graph </summary>
-        public virtual XNode.NodeGraph Copy() {
+        public virtual XNode.NodeGraph Copy()
+        {
             // Instantiate a new nodegraph instance
             NodeGraph graph = Instantiate(this);
             // Instantiate all nodes inside the graph
-            for( int i = 0; i < nodes.Count; i++ ) {
+            for (int i = 0; i < nodes.Count; i++)
+            {
                 if (nodes[i] == null) continue;
                 Node.graphHotfix = graph;
                 Node node = Instantiate(nodes[i]) as Node;
@@ -104,9 +114,11 @@ namespace XNode
             }
 
             // Redirect all connections
-            for( int i = 0; i < graph.nodes.Count; i++ ) {
+            for (int i = 0; i < graph.nodes.Count; i++)
+            {
                 if (graph.nodes[i] == null) continue;
-                foreach (NodePort port in graph.nodes[i].Ports) {
+                foreach (NodePort port in graph.nodes[i].Ports)
+                {
                     port.Redirect(nodes, graph.nodes);
                 }
             }
@@ -114,7 +126,8 @@ namespace XNode
             return graph;
         }
 
-        protected virtual void OnDestroy() {
+        protected virtual void OnDestroy()
+        {
             // Remove all nodes prior to graph destruction
             Clear();
         }
@@ -129,27 +142,31 @@ namespace XNode
             public Type type2;
 
             /// <summary> Automatically ensures the existance of a certain node type, and prevents it from being deleted </summary>
-            public RequireNodeAttribute(Type type) {
+            public RequireNodeAttribute(Type type)
+            {
                 this.type0 = type;
                 this.type1 = null;
                 this.type2 = null;
             }
 
             /// <summary> Automatically ensures the existance of a certain node type, and prevents it from being deleted </summary>
-            public RequireNodeAttribute(Type type, Type type2) {
+            public RequireNodeAttribute(Type type, Type type2)
+            {
                 this.type0 = type;
                 this.type1 = type2;
                 this.type2 = null;
             }
 
             /// <summary> Automatically ensures the existance of a certain node type, and prevents it from being deleted </summary>
-            public RequireNodeAttribute(Type type, Type type2, Type type3) {
+            public RequireNodeAttribute(Type type, Type type2, Type type3)
+            {
                 this.type0 = type;
                 this.type1 = type2;
                 this.type2 = type3;
             }
 
-            public bool Requires(Type type) {
+            public bool Requires(Type type)
+            {
                 if (type == null) return false;
                 if (type == type0) return true;
                 else if (type == type1) return true;

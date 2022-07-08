@@ -263,6 +263,21 @@ namespace XNodeEditor {
             );
         }
 
+        /// <summary>Creates a new C# Class.</summary>
+        [MenuItem("Assets/Create/xNode/NodeBlackboard C# Script", false, 89)]
+        private static void CreateBlackboard() {
+            string[] guids = AssetDatabase.FindAssets("xNode_NodeBlackboardTemplate.cs");
+            if (guids.Length == 0) {
+                Debug.LogWarning("xNode_NodeBlackboardTemplate.cs.txt not found in asset database");
+                return;
+            }
+            string path = AssetDatabase.GUIDToAssetPath(guids[0]);
+            CreateFromTemplate(
+                "NewBlackboard.cs",
+                path
+            );
+        }
+
         public static void CreateFromTemplate(string initialName, string templatePath) {
             ProjectWindowUtil.StartNameEditingIfProjectWindowExists(
                 0,

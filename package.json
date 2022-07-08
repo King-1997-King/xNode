@@ -1,7 +1,18 @@
 {
-  "name": "com.github.siccity.xnode",
-  "description": "xNode provides a set of APIs and an editor interface for creating and editing custom node graphs.",
+  "name": "com.mj.xnode",
+  "description": "自定义结点编辑器工具.\n该插件使用了 odin, 请先安装 odin 插件",
   "version": "1.8.0",
   "unity": "2018.1",
-  "displayName": "xNode"
+  "displayName": "xNode",
+  "keywords": [
+    "xNode"
+  ],
+  "author": "MJ",
+  "samples": [
+    {
+      "displayName": "Demo",
+      "description": "示例场景",
+      "path": "Samples~/Demo"
+    }
+  ]
 }
