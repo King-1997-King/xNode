@@ -1,6 +1,6 @@
 {
   "name": "com.mj.xnode",
-  "description": "自定义结点编辑器工具.\n该插件使用了 odin, 请先安装 odin 插件",
+  "description": "鑷畾涔夌粨鐐圭紪杈戝櫒宸ュ叿.\n璇ユ彃浠朵娇鐢ㄤ簡 odin, 璇峰厛瀹夎 odin 鎻掍欢",
   "version": "1.8.0",
   "unity": "2018.1",
   "displayName": "xNode",
@@ -11,7 +11,7 @@
   "samples": [
     {
       "displayName": "Demo",
-      "description": "示例场景",
+      "description": "绀轰緥鍦烘櫙",
       "path": "Samples~/Demo"
     }
   ]
