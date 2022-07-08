@@ -14,7 +14,9 @@ namespace XNode
         /// See: <see cref="AddNode{T}"/> </summary>
         [SerializeField] public List<Node> nodes = new List<Node>();
 
-        public NodeBlackboard blackboard { get; private set; }
+        [SerializeField] private NodeBlackboard _blackboard;
+
+        public NodeBlackboard blackboard { get => _blackboard; private set => _blackboard = value; }
         /// <summary>
         /// 是否已经初始化
         /// </summary>
