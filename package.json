@@ -1,7 +1,7 @@
 {
   "name": "com.mj.xnode",
   "description": "自定义结点编辑器工具.\n该插件使用了 odin, 请先安装 odin 插件",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "unity": "2018.1",
   "displayName": "xNode",
   "keywords": [
